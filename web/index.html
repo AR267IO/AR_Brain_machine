@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>格拉默脑机</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8.5 5.5l10 6.5-10 6.5z"/></svg></span>
+    <h1>格拉默脑机</h1><span class="ver">v1.1</span>
+    <span class="group-no">群 1124465417</span>
+  </div>
+  <div class="meta" id="meta">
+    <span id="meta-screen">配置读取中</span>
+  </div>
+  <div class="status" id="status" data-mode="idle">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="status-text" id="status-text">待机</span>
+    <span class="status-extra" id="status-extra"></span>
+  </div>
+</header>
+
+<main class="layout">
+
+  <aside class="rail">
+
+    <section class="balance" aria-labelledby="ov-label">
+      <div class="row-between">
+        <h2 class="label" id="ov-label">抢购概况</h2>
+        <span class="tag" id="ov-tag" hidden></span>
+      </div>
+
+      <ul class="goals">
+        <li class="goal" id="goal-helmet">
+          <span class="goal-name">头盔</span>
+          <span class="goal-count"><b id="helmet-done">0</b></span>
+          <span class="goal-of">/</span>
+          <input class="goal-input" id="helmet-goal" type="number" inputmode="numeric"
+                 min="0" max="99" step="1" value="1" aria-label="要抢的头盔数量">
+        </li>
+        <li class="goal" id="goal-armor">
+          <span class="goal-name">护甲</span>
+          <span class="goal-count"><b id="armor-done">0</b></span>
+          <span class="goal-of">/</span>
+          <input class="goal-input" id="armor-goal" type="number" inputmode="numeric"
+                 min="0" max="99" step="1" value="1" aria-label="要抢的护甲数量">
+        </li>
+        <li class="goal goal-price">
+          <span class="goal-name">价格</span>
+          <input class="goal-input" id="price-min" type="number" inputmode="numeric"
+                 min="1" max="999" step="1" value="20" aria-label="最低价，单位万">
+          <span class="goal-of">~</span>
+          <input class="goal-input" id="price-max" type="number" inputmode="numeric"
+                 min="1" max="999" step="1" value="30" aria-label="最高价，单位万">
+          <span class="goal-unit">万</span>
+        </li>
+      </ul>
+
+      <p class="live-price" id="live-price">--</p>
+      <p class="balance-sub" id="bal-sub">成交价 --</p>
+    </section>
+
+    <section class="actions" aria-label="操作">
+      <button class="btn btn-primary" id="btn-start" type="button">
+        <span id="btn-start-text">开始运行</span>
+      </button>
+      <div class="actions-row">
+        <button class="btn btn-ghost" id="btn-probe" type="button">读余额</button>
+        <button class="btn btn-ghost" id="btn-pin" type="button">置顶</button>
+        <button class="btn btn-ghost" id="btn-calib" type="button">重新标定</button>
+      </div>
+      <p class="hint"><kbd>F9</kbd> 随时急停　<span class="sep">·</span>　关掉黑色窗口即退出</p>
+    </section>
+
+    <section class="cfg" aria-labelledby="cfg-label">
+      <h2 class="label" id="cfg-label">当前配置</h2>
+      <dl class="cfg-list" id="cfg-list">
+        <div><dt>文件</dt><dd id="cfg-file">—</dd></div>
+        <div><dt>屏幕</dt><dd id="cfg-screen">—</dd></div>
+        <div><dt>区域</dt><dd id="cfg-count">—</dd></div>
+        <div><dt>标定</dt><dd id="cfg-time">—</dd></div>
+      </dl>
+      <p class="empty" id="cfg-empty" hidden>读不到 config.json，标定一下。</p>
+    </section>
+
+  </aside>
+
+  <section class="console" aria-labelledby="log-label">
+    <div class="console-head">
+      <div class="tabs" role="tablist">
+        <h2 class="label tabs-title" id="log-label">运行日志</h2>
+        <button class="tab" id="tab-log" type="button" role="tab" aria-selected="true">运行日志</button>
+        <button class="tab" id="tab-buy" type="button" role="tab" aria-selected="false">抢购日记</button>
+      </div>
+      <div class="console-tools">
+        <span class="conn" id="conn" data-state="off">未连接</span>
+        <button class="link-btn" id="btn-clear" type="button">清空</button>
+      </div>
+    </div>
+    <ol class="log" id="log" aria-live="polite" aria-relevant="additions"></ol>
+    <ul class="buylog" id="buylog" hidden></ul>
+    <div class="empty-state" id="log-empty">
+      <p class="empty-title">开源从脑机开始</p>
+      <p class="empty-body">
+        先点「读余额」确认「右上·余额数字」那块认得出来，再点「开始运行」。
+      </p>
+      <dl class="facts" id="facts">
+        <div><dt>低于 30 万</dt><dd>走 A：卖「空白存储」补余额</dd></div>
+        <div><dt>30 ~ 80 万</dt><dd>走 B：按「先头后甲」抢装备</dd></div>
+        <div><dt>超过 80 万</dt><dd>或读数带 K，暂停等你处理</dd></div>
+      </dl>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# 打包产物
+build/
+dist/
+*.spec.bak
+
+# 运行时文件
+__pycache__/
+*.py[cod]
+*.log
+*.jsonl
+auto/debug/
+auto/samples/
+
+# 用户自己的标定配置（含机器相关坐标）
+src/标定程序/config.json
+auto/config.json
+
+# 临时截图与测试产物
+out/
+_gh/
+*.zip
+*.exe
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store

@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "calibrated_at": "示例值，请重新标定",
+  "screen": {
+    "w": 3200,
+    "h": 2000,
+    "dpi": 192
+  },
+  "regions": {
+    "btn_peizhuang": [
+      0,
+      0,
+      258,
+      38
+    ],
+    "tab_cangku": [
+      0,
+      0,
+      173,
+      40
+    ],
+    "ocr_balance": [
+      0,
+      0,
+      142,
+      41
+    ],
+    "scan_blank": [
+      0,
+      0,
+      771,
+      1469
+    ],
+    "btn_cart": [
+      0,
+      0,
+      81,
+      87
+    ],
+    "btn_sell": [
+      0,
+      0,
+      187,
+      42
+    ],
+    "btn_sell_ok": [
+      0,
+      0,
+      293,
+      55
+    ],
+    "slot_helmet": [
+      0,
+      0,
+      400,
+      120
+    ],
+    "slot_armor": [
+      0,
+      0,
+      364,
+      96
+    ],
+    "drag_scroll": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1310
+      ]
+    ],
+    "click_a": [
+      0,
+      0,
+      421,
+      111
+    ],
+    "click_b": [
+      0,
+      0,
+      445,
+      93
+    ],
+    "ocr_price": [
+      0,
+      0,
+      160,
+      48
+    ],
+    "btn_buy_1": [
+      0,
+      0,
+      443,
+      58
+    ],
+    "btn_buy_2": [
+      0,
+      0,
+      441,
+      54
+    ],
+    "click_center": [
+      0,
+      0,
+      68,
+      70
+    ]
+  },
+  "options": {
+    "price_min": 200000,
+    "price_max": 300000,
+    "balance_low": 300000,
+    "balance_high": 800000,
+    "refresh_cycle_sec": 600,
+    "target": "helmet",
+    "no_decimal": true
+  }
+}
