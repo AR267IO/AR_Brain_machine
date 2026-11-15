@@ -23,6 +23,7 @@ r"""
 ESC 不绑定任何功能（游戏里要用）。
 """
 import ctypes
+import os
 import sys
 import threading
 import time
@@ -32,6 +33,7 @@ from ctypes import wintypes
 import dvc_config as C
 
 u = ctypes.windll.user32
+g = ctypes.windll.gdi32
 u.CallNextHookEx.restype = ctypes.c_ssize_t
 u.CallNextHookEx.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_size_t, ctypes.c_size_t]
 u.GetWindowLongW.restype = ctypes.c_long
@@ -114,6 +116,62 @@ WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP = 0x0100, 0x0101, 0x0104, 0x010
 VK_CONTROL, VK_MENU, VK_Q, VK_F8, VK_F9, VK_BACK = 0x11, 0x12, 0x51, 0x77, 0x78, 0x08
 VK_LCONTROL, VK_RCONTROL = 0xA2, 0xA3
 HWND_TOPMOST, SWP_NOACTIVATE = ctypes.c_void_p(-1), 0x0010
+
+
+def asset_path(name="blank_storage.png"):
+    """物品模板存哪儿：打包后是 exe 旁边的 auto\\assets\\，源码运行时是项目的 auto\\assets\\。"""
+    if getattr(sys, "frozen", False):
+        base = os.path.dirname(sys.executable)
+    else:
+        here = os.path.dirname(os.path.abspath(__file__))
+        base = os.path.dirname(os.path.dirname(here))
+    d = os.path.join(base, "auto", "assets")
+    try:
+        os.makedirs(d, exist_ok=True)
+    except Exception:
+        pass
+    return os.path.join(d, name)
+
+
+def grab_rect(x1, y1, x2, y2):
+    """截屏幕一块，返回 PIL.Image（RGB）。失败返回 None。"""
+    try:
+        from PIL import Image
+    except Exception:
+        return None
+    w, h = int(x2 - x1), int(y2 - y1)
+    if w <= 0 or h <= 0:
+        return None
+    hdc = u.GetDC(0)
+    if not hdc:
+        return None
+    mdc = g.CreateCompatibleDC(hdc)
+    bmp = g.CreateCompatibleBitmap(hdc, w, h)
+    old = g.SelectObject(mdc, bmp)
+    SRCCOPY = 0x00CC0020
+    g.BitBlt(mdc, 0, 0, w, h, hdc, int(x1), int(y1), SRCCOPY)
+
+    class BMI(ctypes.Structure):
+        _fields_ = [("biSize", wintypes.DWORD), ("biWidth", wintypes.LONG),
+                    ("biHeight", wintypes.LONG), ("biPlanes", wintypes.WORD),
+                    ("biBitCount", wintypes.WORD), ("biCompression", wintypes.DWORD),
+                    ("biSizeImage", wintypes.DWORD), ("biXPelsPerMeter", wintypes.LONG),
+                    ("biYPelsPerMeter", wintypes.LONG), ("biClrUsed", wintypes.DWORD),
+                    ("biClrImportant", wintypes.DWORD)]
+
+    bi = BMI()
+    bi.biSize = ctypes.sizeof(BMI)
+    bi.biWidth = w
+    bi.biHeight = -h
+    bi.biPlanes = 1
+    bi.biBitCount = 32
+    buf = ctypes.create_string_buffer(w * h * 4)
+    g.GetDIBits(mdc, bmp, 0, h, buf, ctypes.byref(bi), 0)
+    g.SelectObject(mdc, old)
+    g.DeleteObject(bmp)
+    g.DeleteDC(mdc)
+    u.ReleaseDC(0, hdc)
+    return Image.frombuffer("RGB", (w, h), buf.raw, "raw", "BGRX", 0, 1)
 
 
 class POINT(ctypes.Structure):
@@ -495,8 +553,38 @@ class Wizard:
         except Exception:
             pass
 
+    def save_item_shot(self, x1, y1, x2, y2):
+        """第 17 步：把框住的那块截图存成物品模板。"""
+        im = grab_rect(x1, y1, x2, y2)
+        if im is None:
+            return "截图失败，模板没更新"
+        path = asset_path()
+        try:
+            im.save(path)
+        except PermissionError:
+            # 老模板可能是只读（打包时被复制过），清掉属性再试一次
+            try:
+                import stat as _st
+                os.chmod(path, _st.S_IREAD | _st.S_IWRITE)
+                im.save(path)
+            except Exception as e:
+                return "存图失败（文件被占用或只读）：%s" % e
+        except Exception as e:
+            return "存图失败：%s" % e
+        return "已存模板 %d×%d → %s" % (im.width, im.height, path)
+
     def commit(self, x1, y1, x2, y2):
         spec = self.cur()
+        if spec["kind"] == "shot":
+            self.cfg["regions"][spec["key"]] = [x1, y1, x2, y2]
+            self.touched.add(spec["key"])
+            msg = self.save_item_shot(x1, y1, x2, y2)
+            self.notice = msg
+            print(msg, flush=True)
+            self.redraw()
+            # 留 1.5 秒让用户看到结果，再进下一步（第 17 步是最后一步，接着就保存）
+            self.root.after(1500, self.next_item)
+            return
         if spec["kind"] == "box":
             self.cfg["regions"][spec["key"]] = [x1, y1, x2, y2]
             self.touched.add(spec["key"])
@@ -540,11 +628,11 @@ class Wizard:
             if i >= self.idx:
                 break
             val = self.cfg["regions"].get(s["key"])
-            if s["kind"] == "box" and val:
+            if s["kind"] in ("box", "shot") and val:
                 cv.create_rectangle(*to_view_box(val), outline=GREEN, width=px(1))
 
         val = self.cur_val()
-        if spec["kind"] == "box" and val:
+        if spec["kind"] in ("box", "shot") and val:
             vx1, vy1, vx2, vy2 = to_view_box(val)
             cv.create_rectangle(vx1, vy1, vx2, vy2, outline=YELLOW, width=px(2),
                                 dash=(px(8), px(6)))
@@ -638,7 +726,8 @@ class Wizard:
                              ("Microsoft YaHei", -pxu(11)),
                              width=pw - pad * 2, tags="hint")
 
-        y += pxu(28)
+        # hint 可能是 2~3 行（模式提示 + 明细），"当前值"要按实际行数往下让
+        y += pxu(13) * (hint.count("\n") + 1) + pxu(6)
         self.val_y = y
         self._panel_text(pad, y, "当前值  %s" % (self.cur_val(),), CYAN,
                          ("Consolas", -pxu(12)), tags="val")

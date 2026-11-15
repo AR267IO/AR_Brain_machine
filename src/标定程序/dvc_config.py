@@ -74,6 +74,10 @@ SPEC = [
          hint="右下第二个按钮", default=[2611, 1625, 3019, 1675]),
     dict(key="click_center", label="兜底·点屏幕中心", kind="box",
          hint="ESC 之后点这里回初始页", default=[1560, 960, 1640, 1040]),
+    # kind="shot"：框完不是记坐标，而是把这块屏幕截图存成物品模板
+    dict(key="item_blank", label="仓库里的「空白存储」图标", kind="shot",
+         hint="框住一个完整物品格（连格子边框一起），截图会存成识别模板",
+         default=[1115, 300, 1420, 700]),
 ]
 
 KEYS = [s["key"] for s in SPEC]
