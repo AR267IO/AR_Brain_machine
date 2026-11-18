@@ -85,7 +85,6 @@ auto/                  自动化核心
   dvc_win.py           Win32 封装：截图、SendInput、DPI
   dvc_deps.py          依赖自检
   ocr_probe.py         OCR 验证小工具（框选区域实时看识别结果和速度）
-  gui.py               老版 Tk 界面（还能用）
   digits/              数字字模 87 张
   assets/              物品模板图
 server/                后端
