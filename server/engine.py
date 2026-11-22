@@ -90,6 +90,9 @@ class Engine:
         self._calib_before = 0.0
         self.pin = W.Pin()
         self.win_hwnd = None      # main.py 开窗后回填，Pin 用它，不靠前台窗口猜
+        # 「抢购版」= exe 名带这三个字，或者环境变量强制。只跑 B，不读余额
+        self.buy_only = ("抢购版" in os.path.basename(sys.executable)
+                         or os.environ.get("GLM_BUY_ONLY") == "1")
         # 只有自己钉的窗口才在结束时还原：用户手动点「置顶」去看日志时
         # 跑一次读余额，不该把窗口弹回去
         self.run_pinned = False
@@ -110,6 +113,7 @@ class Engine:
             "round": self.round_no,
             "elapsed": round(time.time() - self._started_at, 1) if self._started_at else 0,
             "balance": self.balance,
+            "buy_only": self.buy_only,
             "price": self.price,
             "stats": dict(self.stats),
             "purchases": list(self.purchases)[-120:],
@@ -194,7 +198,9 @@ class Engine:
     def start(self, args=None):
         if self.mode != "idle":
             return {"ok": False, "err": "已经在运行"}
-        args = args or ["--live"]
+        args = list(args or ["--live"])
+        if self.buy_only and "--buy-only" not in args:
+            args.append("--buy-only")
         # 新一轮从零开始；上一轮的计数留在界面上直到这次真的开跑
         self.stats = {"helmet": 0, "armor": 0, "last_price": None}
         self._emit("stats", self.stats)

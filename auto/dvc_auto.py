@@ -95,7 +95,8 @@ DEFAULTS = {
     "rapid_timeout": 0.0,       # 高速循环最长跑多久；0 = 不限，一直刷到进区间
     "rapid_pre_sleep": 0.012,   # OCR 前等一下，让画面跟上这次点击
     "buy_move_wait": 0.010,     # 光标移到购买按钮后停 10ms
-    "hit_settle": 0.030,        # 价格命中后点回刷价点2，再等 30ms 才买
+    "hit_settle": 0.030,       # 价格命中后点回刷价点2，再等 30ms 才买
+    "buy_only": False,        # 只抢购：不读余额、不跑 A 程序
     "click_hold": 0.035,
     "click_move_wait": 0.080,   # 鼠标挪到目标后停多久再按下：太短游戏会当成没点中
     "double_click_gap": 0.09,   # 双击两次之间的间隔：太大会被当成两次单击
@@ -615,9 +616,10 @@ class Auto:
 
     # ---------------- 主循环 ----------------
     def run(self, max_rounds=0):
-        log("启动：%dx%d @ %d DPI，%s"
+        log("启动：%dx%d @ %d DPI，%s%s"
             % (self.screen["w"], self.screen["h"], self.screen["dpi"],
-               "实盘点击" if self.live else "dry-run 空跑"))
+               "实盘点击" if self.live else "dry-run 空跑",
+               "，只抢购模式" if self.opts.get("buy_only") else ""))
         if self.screen["vx"] or self.screen["vy"]:
             log("主屏原点不是 (0,0)，多显示器下坐标可能对不上，建议只用主屏", "WARN")
         log("当前前台窗口：%s" % (W.foreground_title() or "(空)"))
@@ -637,11 +639,9 @@ class Auto:
                 log("到达轮数上限 %d，退出" % max_rounds)
                 return
             log("---------- 第 %d 轮 ----------" % self.rounds, "STEP")
-            act, bal = self.probe()
             try:
-                if act == "A":
-                    self.program_a()
-                else:
+                if self.opts.get("buy_only"):
+                    # 只抢购模式：不读余额、不跑 A，直接进 B
                     kind = self.pick_target()
                     if kind is None:
                         log("头盔 %d/%d、护甲 %d/%d 都抢够了，收工"
@@ -649,6 +649,18 @@ class Auto:
                                self.done["armor"], self.goals["armor"]), "STEP")
                         return
                     self.program_b(kind)
+                else:
+                    act, bal = self.probe()
+                    if act == "A":
+                        self.program_a()
+                    else:
+                        kind = self.pick_target()
+                        if kind is None:
+                            log("头盔 %d/%d、护甲 %d/%d 都抢够了，收工"
+                                % (self.done["helmet"], self.goals["helmet"],
+                                   self.done["armor"], self.goals["armor"]), "STEP")
+                            return
+                        self.program_b(kind)
             except Fatal:
                 raise
             except Halt:
@@ -968,6 +980,8 @@ def main(argv=None):
                     % DEFAULTS["click_move_wait"])
     ap.add_argument("--no-reset", action="store_true",
                     help="开跑前不做「7 次 ESC + 点屏幕中央」那套界面重置")
+    ap.add_argument("--buy-only", action="store_true",
+                        help="只抢购：跳过读余额和 A 程序")
     ap.add_argument("--helmet", type=int, metavar="N",
                     help="这轮抢几件头盔，默认 %d" % DEFAULTS["goal_helmet"])
     ap.add_argument("--armor", type=int, metavar="N",
@@ -996,6 +1010,7 @@ def main(argv=None):
     if args.no_reset:
         opts["reset_first"] = False
     if args.helmet is not None:
+        opts["buy_only"] = bool(args.buy_only)
         opts["goal_helmet"] = max(0, int(args.helmet))
     if args.armor is not None:
         opts["goal_armor"] = max(0, int(args.armor))

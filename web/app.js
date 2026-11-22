@@ -13,6 +13,7 @@ const els = {
   balSub: $("bal-sub"), ovTag: $("ov-tag"),
   priceMin: $("price-min"), priceMax: $("price-max"),
   ovLabel: $("ov-label"), livePrice: $("live-price"),
+  edition: $("edition"), buyOnly: $("buy-only"),
   tabLog: $("tab-log"), tabBuy: $("tab-buy"), buylog: $("buylog"),
   btnStart: $("btn-start"), btnStartText: $("btn-start-text"),
   btnProbe: $("btn-probe"), btnCalib: $("btn-calib"), btnPin: $("btn-pin"),
@@ -46,6 +47,7 @@ function toast(msg, tone) {
 /* 目标数量存在本地，关掉再开还在 */
 const GOAL_KEY = "glm.goals";
 const PRICE_KEY = "glm.price";
+const BUY_KEY = "glm.buyonly";
 
 function clampGoal(v, dflt) {
   const n = parseInt(v, 10);
@@ -76,6 +78,42 @@ function writeGoals(g) {
 }
 
 /* ---------------------------------------------------------------- 渲染 */
+// 「抢购版」= 不读余额、不跑 A 程序。后端在 state.buy_only 里告诉我们。
+// facts 里删掉的行不会自己回来，刷新页面才恢复。
+// 只抢购开关：开=跳过读余额和 A 程序；关=恢复正常流程。可来回切。
+const BUY_EMPTY = "直接点「开始运行」。程序会进配装页拖到底、来回点两个刷价点，" +
+  "读到落在你设的区间里就买，不看余额。";
+let _origEmpty = null;
+let _origDt = null;
+
+function applyBuyOnly(on) {
+  document.body.dataset.buyOnly = on ? "on" : "off";
+
+  const probe = document.querySelector("#btn-probe");
+  if (probe) probe.hidden = !!on;
+
+  const body = document.querySelector("#log-empty .empty-body");
+  if (body) {
+    if (on) {
+      if (_origEmpty === null) _origEmpty = body.textContent;
+      body.textContent = BUY_EMPTY;
+    } else if (_origEmpty !== null) {
+      body.textContent = _origEmpty;
+    }
+  }
+
+  const rows = document.querySelectorAll("#facts > div");
+  if (rows.length >= 3) {
+    rows[0].hidden = !!on;   // 低于 30 万 → 走 A：只抢购模式下没有 A
+    rows[2].hidden = !!on;   // 超过 80 万 → 暂停：不读余额，没这个判断
+    const dt = rows[1].querySelector("dt");
+    if (dt) {
+      if (_origDt === null) _origDt = dt.textContent;
+      dt.textContent = on ? "目标区间" : _origDt;
+    }
+  }
+}
+
 function syncMode() {
   // 窗口小了就切精简形态：运行中会自动缩小并置顶，手动置顶也一样
   const work = pinned || state.mode === "running";
@@ -282,6 +320,11 @@ async function loadState() {
     state = s;
     setStatus(s.mode, s.round ? `第 ${s.round} 轮` : "");
     applyPin(s.pinned);
+    if (els.buyOnly) {
+    const saved = localStorage.getItem(BUY_KEY);
+    els.buyOnly.checked = saved === null ? !!s.buy_only : saved === "1";
+  }
+  applyBuyOnly(!!(els.buyOnly && els.buyOnly.checked));
     renderConfig(s.config || {});
     if (s.stats) stats = s.stats;
     renderStats();
@@ -324,6 +367,14 @@ function connect() {
 }
 
 /* ---------------------------------------------------------------- 交互 */
+if (els.buyOnly) {
+  els.buyOnly.addEventListener("change", () => {
+    const on = els.buyOnly.checked;
+    localStorage.setItem(BUY_KEY, on ? "1" : "0");
+    applyBuyOnly(on);
+  });
+}
+
 els.btnStart.addEventListener("click", async () => {
   if (state.mode === "running") {
     const r = await api("/api/stop", {});
@@ -340,6 +391,7 @@ els.btnStart.addEventListener("click", async () => {
       "--armor", String(g.armor),
       "--price-min", String(p.min * 10000),
       "--price-max", String(p.max * 10000),
+      ...(els.buyOnly && els.buyOnly.checked ? ["--buy-only"] : []),
     ],
   });
   if (!r.ok) toast(r.err || "启动失败", "bad");
